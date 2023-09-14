@@ -4,7 +4,7 @@ This repository contains a TypeScript utility function, `request`, designed to m
 
 ## Installation
 
-Please feel free to copy the code from `src/request.ts` into your project. Alternatively, you can git clone this repository.
+Please feel free to copy the code from `src/index.ts` into your project. Alternatively, you can git clone this repository.
 
 Here's the required packages:
 
