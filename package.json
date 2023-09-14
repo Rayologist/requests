@@ -9,16 +9,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/qs": "^6.9.8",
     "node-fetch": "2",
-    "qs": "^6.11.2",
-    "url-template": "^3.1.0"
+    "qs": "^6.11.2"
   },
   "devDependencies": {
     "@types/jest": "^29.5.4",
     "@types/node-fetch": "^2.6.4",
+    "@types/qs": "^6.9.8",
     "jest": "^29.6.4",
-    "json-server": "^0.17.3",
     "ts-jest": "^29.1.1",
     "typescript": "^5.2.2"
   }
