@@ -5,7 +5,9 @@ export async function request<
   Payload extends Record<string, any>,
   Data = unknown,
   ErrorReturn = unknown,
->(args: Request<Payload>) {
+>(
+  args: Request<Payload>,
+): Promise<readonly [Data, null] | readonly [null, RequestError<ErrorReturn>]> {
   const controller = new AbortController();
   let timer: NodeJS.Timeout | null = null;
 
@@ -46,7 +48,15 @@ export async function request<
 
     clearTimeout(timer);
 
-    const data = await response.json();
+    const contentType = response.headers.get('Content-Type');
+
+    let data: any;
+
+    if (contentType?.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
 
     return [data as Data, null] as const;
   } catch (e) {
