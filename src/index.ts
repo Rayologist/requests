@@ -18,7 +18,7 @@ export async function request<
 
   try {
     timer = setTimeout(() => {
-      controller.abort(`{ url: "${requestURL}", timeout: "${timeout} s" }`);
+      controller.abort();
     }, timeout * 1000);
 
     const response = await fetch(requestURL, {
@@ -37,6 +37,7 @@ export async function request<
       }
 
       throw new RequestError({
+        message: `Request failed: ${method} ${requestURL} returned a status code of ${response.status}`,
         statusCode: response.status,
         data,
         url: requestURL,
@@ -67,7 +68,8 @@ export async function request<
     if (e instanceof Error) {
       if (e.name === 'AbortError') {
         e = new RequestError({
-          message: controller.signal.reason,
+          message: `Request timeout: ${method} ${requestURL} did not respond within ${timeout} second(s)`,
+          data: { timeout: { seconds: timeout } },
           url: url,
           method: method,
           timestamp: Date.now(),
@@ -166,7 +168,7 @@ type RequestErrorArgs<T> = {
   method: HTTPMethods;
   timestamp: number;
   statusCode?: number;
-  message?: string;
+  message: string;
   data?: T;
   headers?: Record<string, string[]>;
 };
