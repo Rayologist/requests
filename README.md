@@ -35,6 +35,33 @@ const [data, error] = await request<{}, ResponseType>({
 
 In this case, the `query` object includes both `_limit` and `_sort`. The constructed URL would be `https://api.example.com/endpoint?_limit=5&_sort=desc`.
 
+#### Customizing Query Strings with `queryOptions`
+
+This feature leverages the `qs` library to stringify the query object.
+
+You can pass in options recognized by `qs.stringify` through the `queryOptions` field. This allows you to control array format, add array indices, specify delimiter types, and much more.
+
+Here's an example:
+
+```typescript
+const [data, error] = await request<{}, ResponseType>({
+  url: 'https://api.example.com/items',
+  method: 'GET',
+  query: { arrayParam: ['item1', 'item2', 'item3'] },
+  queryOptions: {
+    arrayFormat: 'indices'
+  }
+});
+```
+
+In this example, the URL would be transformed to:
+
+```txt
+https://api.example.com/items?arrayParam[0]=item1&arrayParam[1]=item2&arrayParam[2]=item3
+```
+
+For a complete list of options and their usage, you can refer to the [`qs` library documentation](https://github.com/ljharb/qs).
+
 ### POST request with JSON payload
 
 ```typescript
