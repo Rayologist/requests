@@ -98,6 +98,67 @@ if (error) {
 
 In this case, the `urlParams` object includes both `userId` and `postId`. The constructed URL would be `https://api.example.com/users/1/posts/999`.
 
+### Response Handlers and Callbacks
+
+In our `request` function, we provide two types of callbacks: `handleSuccessResponse` and `handleErrorResponse`. These callbacks are used to handle the response from the API call. You can use these callbacks to handle the response in a custom way, such as parsing the response body, logging the response, or accessing response headers.
+
+```typescript
+const [data, err] = await request(
+  {
+    url: 'https://example.com',
+    method: 'GET',
+  },
+  {
+    handleSuccessResponse,
+    handleErrorResponse
+  },
+);
+```
+
+By default, the `request` function uses the following handler for both success and error responses:
+
+```typescript
+const handleResponse: ResponseHandler = async (response) => {
+  let data: any;
+
+  if (response.headers.get('Content-Type')?.includes('application/json')) {
+    data = await response.json();
+  } else {
+    data = await response.text();
+  }
+
+  return data;
+};
+```
+
+#### Success Response Handler
+
+This callback is called when the API call is successful (i.e., the HTTP status code is in the range 200-299). The callback receives the response object as its argument.
+
+```typescript
+import { ResponseHandler} from '<package-name>';
+
+const handleSuccessResponse: ResponseHandler = async (response) => {
+  // handle the response
+  return response.blob();
+};
+```
+
+#### Error Response Handler
+
+This callback is called when the API call fails. The callback receives the response object as its argument.
+
+```typescript
+import { ResponseHandler} from '<package-name>';
+
+const handleErrorResponse: ResponseHandler = async (response) => {
+  // handle the response
+  return response.arrayBuffer();
+};
+```
+
+These callbacks offer tailored handling for different response types. In the example above, the `handleSuccessResponse` callback returns a `Blob` object, while the `handleErrorResponse` callback returns an `ArrayBuffer` object.
+
 ### Handling Errors
 
 Here's how you can handle errors in a basic scenario:
