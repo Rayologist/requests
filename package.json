@@ -1,6 +1,6 @@
 {
   "name": "requests",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Enhances node-fetch with added URL parameters, JSON body support, query strings, and error handling.",
   "main": "index.js",
   "scripts": {
