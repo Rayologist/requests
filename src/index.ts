@@ -1,4 +1,4 @@
-import fetch, { HeaderInit } from 'node-fetch';
+import fetch, { HeaderInit, Response } from 'node-fetch';
 import qs from 'qs';
 
 export async function request<
@@ -7,11 +7,17 @@ export async function request<
   ErrorReturn = unknown,
 >(
   args: Request<Payload>,
+  callbacks?: {
+    handleErrorResponse?: ResponseHandler;
+    handleSuccessResponse?: ResponseHandler;
+  },
 ): Promise<readonly [Data, null] | readonly [null, RequestError<ErrorReturn>]> {
   const controller = new AbortController();
   let timer: NodeJS.Timeout | null = null;
 
   const { url, method, payload, headers, query, queryOptions, urlParams, timeout = 30 } = args;
+  const { handleErrorResponse = handleResponse, handleSuccessResponse = handleResponse } =
+    callbacks || {};
 
   const body = constuctBody(payload, method);
   const requestURL = constructURL({ url, query, method, queryOptions, urlParams });
@@ -29,12 +35,7 @@ export async function request<
     });
 
     if (!response.ok) {
-      let data;
-      if (response.headers.get('Content-Type')?.includes('application/json')) {
-        data = await response.json();
-      } else {
-        data = await response.text();
-      }
+      const data = await handleErrorResponse(response);
 
       throw new RequestError({
         message: `Request failed: ${method} ${requestURL} returned a status code of ${response.status}`,
@@ -49,15 +50,7 @@ export async function request<
 
     clearTimeout(timer);
 
-    const contentType = response.headers.get('Content-Type');
-
-    let data: any;
-
-    if (contentType?.includes('application/json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
+    const data = await handleSuccessResponse(response);
 
     return [data as Data, null] as const;
   } catch (e) {
@@ -80,6 +73,18 @@ export async function request<
     return [null, e as RequestError<ErrorReturn>] as const;
   }
 }
+
+export const handleResponse: ResponseHandler = async (response) => {
+  let data: any;
+
+  if (response.headers.get('Content-Type')?.includes('application/json')) {
+    data = await response.json();
+  } else {
+    data = await response.text();
+  }
+
+  return data;
+};
 
 export function constuctBody<T extends Record<string, any>>(
   payload: T | undefined,
@@ -172,5 +177,7 @@ type RequestErrorArgs<T> = {
   data?: T;
   headers?: Record<string, string[]>;
 };
+
+export type ResponseHandler = (response: Response) => Promise<any>;
 
 export type HTTPMethods = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
