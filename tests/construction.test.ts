@@ -1,4 +1,4 @@
-import { constructURL, constuctBody } from '../src';
+import { constructURL, constructBody } from '../src';
 
 describe(__filename, () => {
   it('should construct url when the http method is get', () => {
@@ -48,7 +48,7 @@ describe(__filename, () => {
   });
 
   it('should construct body when there is body and the http method is not get', () => {
-    const body = constuctBody(
+    const body = constructBody(
       {
         title: 'foo',
         body: 'bar',
@@ -67,13 +67,13 @@ describe(__filename, () => {
   });
 
   it('should not construct body when there is no body', () => {
-    const body = constuctBody({}, 'POST');
+    const body = constructBody({}, 'POST');
 
     expect(body).toBeUndefined();
   });
 
   it('should not construct body when the http method is get', () => {
-    const body = constuctBody(
+    const body = constructBody(
       {
         title: 'foo',
         body: 'bar',
