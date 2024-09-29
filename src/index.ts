@@ -1,37 +1,38 @@
-import fetch, { HeaderInit, Response } from 'node-fetch';
+import fetch, { HeadersInit, Response } from 'node-fetch';
+import { AbortSignal } from 'node-fetch/externals';
 import qs from 'qs';
 
-export async function request<
+async function baseRequest<
   Payload extends Record<string, any>,
   Data = unknown,
   ErrorReturn = unknown,
 >(
   args: Request<Payload>,
-  callbacks?: {
-    handleErrorResponse?: ResponseHandler;
-    handleSuccessResponse?: ResponseHandler;
-  },
+  options?: Omit<RequestOptions, 'retry'>,
 ): Promise<readonly [Data, null] | readonly [null, RequestError<ErrorReturn>]> {
   const controller = new AbortController();
   let timer: NodeJS.Timeout | null = null;
 
-  const { url, method, payload, headers, query, queryOptions, urlParams, timeout = 30 } = args;
-  const { handleErrorResponse = handleResponse, handleSuccessResponse = handleResponse } =
-    callbacks || {};
+  const { url, method, payload, headers, query, queryOptions, urlParams } = args;
+  const {
+    handleErrorResponse = handleResponse,
+    handleSuccessResponse = handleResponse,
+    timeout = 30 * 1000,
+  } = options || {};
 
-  const body = constuctBody(payload, method);
+  const body = constructBody(payload, method);
   const requestURL = constructURL({ url, query, method, queryOptions, urlParams });
 
   try {
     timer = setTimeout(() => {
       controller.abort();
-    }, timeout * 1000);
+    }, timeout);
 
     const response = await fetch(requestURL, {
       method,
       body,
       headers,
-      signal: controller.signal,
+      signal: controller.signal as AbortSignal,
     });
 
     if (!response.ok) {
@@ -74,6 +75,49 @@ export async function request<
   }
 }
 
+export async function request<
+  Payload extends Record<string, any>,
+  Data = unknown,
+  ErrorReturn = unknown,
+>(
+  args: Request<Payload>,
+  options?: RequestOptions,
+): Promise<readonly [Data, null] | readonly [null, RequestError<ErrorReturn>]> {
+  const { retry } = options || {};
+
+  if (retry?.count && retry.count > 0) {
+    for (let count = 0; count < retry.count; count++) {
+      const [data, error] = await baseRequest<Payload, Data, ErrorReturn>(args, options);
+
+      if (error?.statusCode === 429) {
+        return [null, error];
+      }
+
+      if (error && count === retry.count) {
+        return [null, error];
+      }
+
+      if (error) {
+        let delay: number | undefined = undefined;
+
+        if (typeof retry.delay === 'function') {
+          delay = retry.delay(count);
+        } else if (typeof retry.delay === 'number') {
+          delay = retry.delay;
+        } else {
+          delay = computeDefaultRetryDelay(count);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      } else {
+        return [data, null];
+      }
+    }
+  }
+
+  return baseRequest<Payload, Data, ErrorReturn>(args, options);
+}
+
 export const handleResponse: ResponseHandler = async (response) => {
   let data: any;
 
@@ -86,7 +130,11 @@ export const handleResponse: ResponseHandler = async (response) => {
   return data;
 };
 
-export function constuctBody<T extends Record<string, any>>(
+export const computeDefaultRetryDelay: RetryDelayComputer = (retryCount) => {
+  return retryCount * 2000;
+};
+
+export function constructBody<T extends Record<string, any>>(
   payload: T | undefined,
   method: HTTPMethods,
 ) {
@@ -141,8 +189,7 @@ export type Request<Payload extends Record<string, any>> = {
   query?: Record<string, any>;
   urlParams?: Record<string, any>;
   payload?: Payload;
-  headers?: HeaderInit;
-  timeout?: number;
+  headers?: HeadersInit;
   queryOptions?: qs.IStringifyOptions;
 };
 
@@ -178,6 +225,18 @@ type RequestErrorArgs<T> = {
   headers?: Record<string, string[]>;
 };
 
+export type RequestOptions = {
+  retry?: {
+    count?: number;
+    delay?: RetryDelayComputer | number;
+  };
+  timeout?: number;
+  handleErrorResponse?: ResponseHandler;
+  handleSuccessResponse?: ResponseHandler;
+};
+
 export type ResponseHandler = (response: Response) => Promise<any>;
+
+export type RetryDelayComputer = (attempt: number) => number;
 
 export type HTTPMethods = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
