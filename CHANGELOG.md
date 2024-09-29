@@ -1,7 +1,9 @@
 # requests
 
-## 1.0.0
+## 2.0.0
 
-### Major Changes
+- Add retry feature and move `timeout` to request `options`
+
+## 1.0.0
 
 - This is the first release for `requests`
